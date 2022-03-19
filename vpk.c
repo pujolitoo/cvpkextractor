@@ -34,15 +34,16 @@ char *readChars(FILE* file)
     int offset = 0;
     char bytechar;
     char* final = (char*)malloc(1);
+    final[0] = 0;
     while(fread(&bytechar, sizeof(char), 1, file))
     {
+        final = (char*)realloc(final, offset+1);
         final[offset] = bytechar;
-        realloc(final, offset+1);
-        offset++;
         if(bytechar == '\0')
         {
             break;
         }
+        offset++;
     }
 
     printf("LEN: %u\n", strlen(final));
@@ -53,6 +54,17 @@ char *readChars(FILE* file)
     }
 
     return final;
+}
+
+void readChars_1(FILE* file, char* buffer)
+{
+    unsigned int offset = 0;
+    char bytechar;
+    while(1)
+    {
+        fread(&bytechar, sizeof(char), 1, file);
+        buffer[offset] = bytechar;
+    }
 }
 
 VPKEntryList_t *createArray()
@@ -69,20 +81,20 @@ void addToArray(VPKEntryList_t* array, VPKEntry_t data)
     size_t newsize;
     if(array->array == NULL)
     {
-        array->array = malloc(sizeof(data));
+        array->array = (VPKEntry_t*)malloc(sizeof(data));
         newsize = sizeof(data);
     }else{
         newsize = sizeof(*array->array)+sizeof(data);
     }
     VPKEntry_t* vpkarray = array->array;
-    vpkarray = realloc(array->array, newsize);
+    vpkarray = (VPKEntry_t*)realloc(array->array, newsize);
     if(vpkarray == NULL)
     {
         printf("ERROR ADDING TO ARRAY. %s\n", strerror(errno));
         exit(1);
     }
+    vpkarray[array->count] = data;
     array->count++;
-    vpkarray[array->count-1] = data;
     array->array = vpkarray;
 }
 
@@ -127,8 +139,8 @@ int main(int argc, char** argv)
         }
         while(1) // folders
         {
-            printf("------FOLDER READ START-----------\n");
             folder = readChars(vpkfile);
+            printf("------FOLDER READ START----------- %s\n", folder);
             if(folder == NULL)
             {
                 break;
@@ -154,12 +166,15 @@ int main(int argc, char** argv)
                 fread(&file.lenght, sizeof(unsigned int), 1, vpkfile);
                 skipBytes(2, vpkfile);
                 printf("CURPOS: %u\n", ftell(vpkfile));
-                addToArray(list, file);
+                //addToArray(list, file);
                 printf("PATH: %s\n", file.path);
+
                 printf("------FILE READ END-----------\n");
+                filename = NULL;
 
             }
             printf("------FOLDER READ END-----------\n");
+            folder = NULL;
         }
         printf("------EXTENSION READ END-----------\n\n");
     }
@@ -174,8 +189,6 @@ int main(int argc, char** argv)
     printf("Version: %u\n", version);
 
     printf("Tree size: %u\n", treeSize);
-
-
 
     return 0;
 }
