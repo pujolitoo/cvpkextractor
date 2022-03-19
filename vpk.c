@@ -3,6 +3,7 @@
 #include<string.h>
 #include<errno.h>
 
+
 typedef struct{
     unsigned int CRC; // checksum
     char* path; //virtual path
@@ -17,13 +18,14 @@ typedef struct{
     unsigned int count;
 } VPKEntryList_t;
 
-void skipBytes(size_t offset, FILE* file)
+size_t skipBytes(size_t offset, FILE* file)
 {
-    fread(NULL, offset, 1, file);
+    size_t res = fread(NULL, offset, 1, file);
     if(ferror(file))
     {
         printf("There was some error skipping bytes.");
     }
+    return res;
 }
 
 
@@ -117,12 +119,14 @@ int main(int argc, char** argv)
     while(1) // extension
     {
         extension = readChars(vpkfile);
+        printf("------EXTENSION READ START .%s-----------\n", extension);
         if(extension == NULL)
         {
             break;
         }
         while(1) // folders
         {
+            printf("------FOLDER READ START-----------\n");
             folder = readChars(vpkfile);
             if(folder == NULL)
             {
@@ -130,13 +134,14 @@ int main(int argc, char** argv)
             }
             while(1) // Filename
             {
+
+                printf("------FILE READ START-----------\n");
                 filename = readChars(vpkfile);
                 if(filename == NULL)
                 {
                     break;
                 }
 
-            
 
                 VPKEntry_t file;
                 fread(&file.CRC, sizeof(unsigned int), 1, vpkfile);
@@ -147,11 +152,15 @@ int main(int argc, char** argv)
                 fread(&file.offset, sizeof(unsigned int), 1, vpkfile);
                 fread(&file.lenght, sizeof(unsigned int), 1, vpkfile);
                 skipBytes(2, vpkfile);
+                printf("CURPOS: %u\n", ftell(vpkfile));
                 addToArray(list, file);
                 printf("PATH: %s\n", file.path);
+                printf("------FILE READ END-----------\n");
 
             }
+            printf("------FOLDER READ END-----------\n");
         }
+        printf("------EXTENSION READ END-----------\n\n");
     }
 
     fclose(vpkfile);
