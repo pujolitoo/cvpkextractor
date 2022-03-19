@@ -60,6 +60,7 @@ VPKEntryList_t *createArray()
     VPKEntryList_t* list = malloc(sizeof(VPKEntryList_t));
     list->count = 0;
     list->array = NULL;
+    return list;
 
 }
 
