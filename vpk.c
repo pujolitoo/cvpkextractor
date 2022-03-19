@@ -56,16 +56,6 @@ char *readChars(FILE* file)
     return final;
 }
 
-void readChars_1(FILE* file, char* buffer)
-{
-    unsigned int offset = 0;
-    char bytechar;
-    while(1)
-    {
-        fread(&bytechar, sizeof(char), 1, file);
-        buffer[offset] = bytechar;
-    }
-}
 
 VPKEntryList_t *createArray()
 {
