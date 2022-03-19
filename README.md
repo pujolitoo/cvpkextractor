@@ -1,0 +1,1 @@
+This project has the goal to unpack and manage vpk files from source engine.
