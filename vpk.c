@@ -121,10 +121,8 @@ void getFile(char* path, VPKEntry_t entry, char* data)
         exit(1);
     }
 
-    
-
     FILE* vpkEntry = fopen(fullPath, "rb");
-    fseek(vpkEntry, entry.offset, SEEK_SET);
+    skipBytes(entry.offset, vpkEntry);
     fread(data, (size_t)entry.lenght, 1, vpkEntry);
     fclose(vpkEntry);
     free(fullPath);
@@ -254,7 +252,6 @@ int main(int argc, char** argv)
     {
         char* data;
         char* outputPath = (char*)malloc(255);
-        //sprintf(outputPath, "%s%s", baseOutput, list->array[offset].path);
         sprintf(outputPath, "%s%s", baseOutput, list->array[offset].path);
         printf("%s\n", outputPath);
 
