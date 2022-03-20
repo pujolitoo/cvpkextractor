@@ -3,6 +3,11 @@
 #include<string.h>
 #include<errno.h>
 
+#if defined(_WIN32)
+    #include<windows.h>
+    #include<tchar.h>     
+#endif
+
 
 typedef struct{
     unsigned int CRC; // checksum
@@ -97,12 +102,29 @@ void deleteArray(VPKEntryList_t* list)
 
 void getFile(char* path, VPKEntry_t entry, char* data)
 {
-    char* fullPath = strcat(entry.index, path);
+    char* fullPath = (char*)malloc(255);
+    if (entry.index >= 0)
+    {
+        sprintf(fullPath, "%s00%u.vpk", path, entry.index);
+    }
+    else if(entry.index >= 10)
+    {
+        sprintf(fullPath, "%s0%u.vpk", path, entry.index);
+    }else if (entry.index >= 100 && entry.index < 1000)
+    {
+        sprintf(fullPath, "%s%u.vpk", path, entry.index);
+    }else{
+        printf("limit exeeded");
+        exit(1);
+    }
+
+    
 
     FILE* vpkEntry = fopen(fullPath, "rb");
     fseek(vpkEntry, entry.offset, SEEK_SET);
     fread(data, (size_t)entry.lenght, 1, vpkEntry);
     fclose(vpkEntry);
+    free(fullPath);
 }
 
 char *deleteExtension(char* source, char* extension)
@@ -201,11 +223,11 @@ int main(int argc, char** argv)
     }
 
     fclose(vpkfile);
-    
-    printf("RANDOMPATH: %s\n", list->array[10].path);
-    printf("RANDOMINDEX: %u\n", list->array[10].index);
 
-    deleteArray(list);
+    printf("FILES READED: %u\n", list->count);
+    
+    printf("RANDOMPATH: %s\n", list->array[0].path);
+    printf("RANDOMINDEX: %u\n", list->array[60].index);
 
     printf("uint size: %u\n", sizeof(unsigned int));
 
@@ -217,16 +239,36 @@ int main(int argc, char** argv)
 
     printf("EXTRACTING...\n");
 
-    char* data;
-
-    const char* baseOutput = "./vpk_extracted/";
 
     printf("ANAME: %s\n", absoluteName);
 
+    char* baseOutput = "./vpk_extracted/";
+    char* test1 = "a";
     int offset = 0;
     while(offset < list->count)
     {
+        char* data;
+        char* outputPath = (char*)malloc(255);
+        //sprintf(outputPath, "%s%s", baseOutput, list->array[offset].path);
+        sprintf(outputPath, "%s%s", baseOutput, list->array[offset].path);
+        printf("%s\n", outputPath);
+
+        #if defined(WIN32)
+            CreateDirectory((LPCWSTR)baseOutput, NULL);
+        #endif
+
+        //get file data
         getFile(absoluteName, list->array[offset], data);
+
+        //output file
+        FILE* output = fopen(outputPath, "wb");
+        
+        fwrite(data, sizeof(data), 1, output);
+        fclose(output);
+        free(outputPath);
+
+        //increent offset
+        offset++;
     }
 
     getchar();
