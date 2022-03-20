@@ -2,6 +2,8 @@
 #include<stdio.h>
 #include<string.h>
 #include<errno.h>
+#include<sys/stat.h>
+#include<sys/types.h>
 
 #if defined(_WIN32)
     #include<windows.h>
@@ -12,6 +14,7 @@
 typedef struct{
     unsigned int CRC; // checksum
     char* path; //virtual path
+    char* folder; // folder
     unsigned int preload;
     unsigned short index; // vpk file part index
     unsigned int offset; // offset from pos 0 of the vpk file
@@ -200,6 +203,8 @@ int main(int argc, char** argv)
                 fread(&file.CRC, sizeof(unsigned int), 1, vpkfile);
                 file.path = malloc(strlen(folder) + strlen(filename) + strlen(extension) +1);
                 sprintf(file.path, "%s/%s.%s", folder, filename, extension);
+                file.folder = malloc(strlen(folder)+1);
+                sprintf(file.folder, "%s", folder);
                 fread(&file.preload, 2, 1, vpkfile);
                 fread(&file.index, sizeof(unsigned int), 1, vpkfile);
                 fread(&file.offset, sizeof(unsigned int), 1, vpkfile);
@@ -253,8 +258,14 @@ int main(int argc, char** argv)
         sprintf(outputPath, "%s%s", baseOutput, list->array[offset].path);
         printf("%s\n", outputPath);
 
+        char* folder = (char*)malloc(255);
+        sprintf(folder, "%s%s", baseOutput, list->array[offset].folder);
+        printf(folder);
+
         #if defined(WIN32)
-            CreateDirectory((LPCWSTR)baseOutput, NULL);
+            CreateDirectory(baseOutput, NULL);
+            CreateDirectory("./vpk_extracted/sound", NULL);
+            CreateDirectory(folder, NULL);
         #endif
 
         //get file data
@@ -266,6 +277,7 @@ int main(int argc, char** argv)
         fwrite(data, sizeof(data), 1, output);
         fclose(output);
         free(outputPath);
+        free(folder);
 
         //increent offset
         offset++;
