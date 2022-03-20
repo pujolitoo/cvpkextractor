@@ -1,5 +1,5 @@
 all:
-	gcc vpk.c -o vpk.exe
+	gcc vpk.c -o vpk.exe -I/
 
 run:
 	gcc vpk.c -o vpk.exe

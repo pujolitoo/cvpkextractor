@@ -8,7 +8,7 @@ typedef struct{
     unsigned int CRC; // checksum
     char* path; //virtual path
     unsigned int preload;
-    unsigned int index; // vpk file part index
+    unsigned short index; // vpk file part index
     unsigned int offset; // offset from pos 0 of the vpk file
     unsigned int lenght; // file size
 } VPKEntry_t;
@@ -16,7 +16,10 @@ typedef struct{
 typedef struct{
     VPKEntry_t* array;
     unsigned int count;
+    size_t size;
 } VPKEntryList_t;
+
+static unsigned int files = 0;
 
 size_t skipBytes(size_t offset, FILE* file)
 {
@@ -62,30 +65,52 @@ VPKEntryList_t *createArray()
     VPKEntryList_t* list = malloc(sizeof(VPKEntryList_t));
     list->count = 0;
     list->array = NULL;
+    list->size = 0;
     return list;
 
 }
 
 void addToArray(VPKEntryList_t* array, VPKEntry_t data)
 {
-    size_t newsize;
+    size_t newsize = sizeof(data);
     if(array->array == NULL)
     {
-        array->array = (VPKEntry_t*)malloc(sizeof(data));
-        newsize = sizeof(data);
-    }else{
-        newsize = sizeof(*array->array)+sizeof(data);
+        array->array = (VPKEntry_t*)malloc(newsize);
     }
-    VPKEntry_t* vpkarray = array->array;
-    vpkarray = (VPKEntry_t*)realloc(array->array, newsize);
-    if(vpkarray == NULL)
+    array->size += newsize;
+    array->array = (VPKEntry_t*)realloc(array->array, array->size);
+    printf("%u\n", newsize);
+    if(array->array == NULL)
     {
         printf("ERROR ADDING TO ARRAY. %s\n", strerror(errno));
         exit(1);
     }
-    vpkarray[array->count] = data;
+    array->array[array->count] = data;
     array->count++;
-    array->array = vpkarray;
+}
+
+void deleteArray(VPKEntryList_t* list)
+{
+    free(list->array);
+    free(list);
+}
+
+void getFile(char* path, VPKEntry_t entry, char* data)
+{
+    char* fullPath = strcat(entry.index, path);
+
+    FILE* vpkEntry = fopen(fullPath, "rb");
+    fseek(vpkEntry, entry.offset, SEEK_SET);
+    fread(data, (size_t)entry.lenght, 1, vpkEntry);
+    fclose(vpkEntry);
+}
+
+char *deleteExtension(char* source, char* extension)
+{
+    char* temp = (char*)malloc(strlen(source));
+    strcpy(temp, source);
+    temp[(strlen(temp)-strlen(extension))] = '\0';
+    return temp;
 }
 
 int main(int argc, char** argv)
@@ -97,9 +122,12 @@ int main(int argc, char** argv)
         exit(0);
     }
 
+    char* dirPath = argv[1];
+    char* absoluteName = deleteExtension(argv[1], "dir.vpk");
+
     FILE* vpkfile;
     
-    vpkfile = fopen(argv[1], "rb");
+    vpkfile = fopen(dirPath, "rb");
 
     unsigned int signature;
 
@@ -118,6 +146,7 @@ int main(int argc, char** argv)
     char* filename;
 
     VPKEntryList_t* list = createArray();
+
 
     while(1) // extension
     {
@@ -145,7 +174,6 @@ int main(int argc, char** argv)
                     break;
                 }
 
-
                 VPKEntry_t file;
                 fread(&file.CRC, sizeof(unsigned int), 1, vpkfile);
                 file.path = malloc(strlen(folder) + strlen(filename) + strlen(extension) +1);
@@ -155,9 +183,11 @@ int main(int argc, char** argv)
                 fread(&file.offset, sizeof(unsigned int), 1, vpkfile);
                 fread(&file.lenght, sizeof(unsigned int), 1, vpkfile);
                 skipBytes(2, vpkfile);
-                printf("CURPOS: %u\n", ftell(vpkfile));
-                //addToArray(list, file);
+                printf("SIZE: %u\n", sizeof(unsigned int)*3 + sizeof(unsigned short)*3);
+                addToArray(list, file);
                 printf("PATH: %s\n", file.path);
+
+                files++;
 
                 printf("------FILE READ END-----------\n");
                 filename = NULL;
@@ -167,10 +197,15 @@ int main(int argc, char** argv)
             folder = NULL;
         }
         printf("------EXTENSION READ END-----------\n\n");
+        extension = NULL;
     }
 
     fclose(vpkfile);
     
+    printf("RANDOMPATH: %s\n", list->array[10].path);
+    printf("RANDOMINDEX: %u\n", list->array[10].index);
+
+    deleteArray(list);
 
     printf("uint size: %u\n", sizeof(unsigned int));
 
@@ -179,6 +214,22 @@ int main(int argc, char** argv)
     printf("Version: %u\n", version);
 
     printf("Tree size: %u\n", treeSize);
+
+    printf("EXTRACTING...\n");
+
+    char* data;
+
+    const char* baseOutput = "./vpk_extracted/";
+
+    printf("ANAME: %s\n", absoluteName);
+
+    int offset = 0;
+    while(offset < list->count)
+    {
+        getFile(absoluteName, list->array[offset], data);
+    }
+
+    getchar();
 
     return 0;
 }
