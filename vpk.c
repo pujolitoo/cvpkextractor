@@ -153,7 +153,6 @@ char* getFile(char* path, VPKEntry_t entry)
     }
     fseek(vpkEntry, entry.offset, SEEK_SET);
     size_t readed = fread(data, 1, entry.lenght, vpkEntry);
-    printf("SIZEOF: %zu\n", readed);
     fclose(vpkEntry);
     free(fullPath);
     return data;
@@ -258,18 +257,7 @@ int main(int argc, char** argv)
 
     fclose(vpkfile);
 
-    printf("FILES READED: %u\n", list->count);
-    
-    printf("RANDOMPATH: %s\n", list->array[0].path);
-    printf("RANDOMINDEX: %u\n", list->array[60].index);
-
-    printf("uint size: %u\n", sizeof(unsigned int));
-
-    printf("Signature: %u\n", signature);
-
-    printf("Version: %u\n", version);
-
-    printf("Tree size: %u\n", treeSize);
+    printf("FILES READED: %u\n\n", list->count);
 
     printf("EXTRACTING...\n");
 
@@ -279,10 +267,6 @@ int main(int argc, char** argv)
     char* baseOutput = "./vpk_extracted/";
     for(int i = 0; i < list->count; i++)
     {
-        printf("\nINDEX: %u\n", list->array[i].index);
-        printf("OFFSET: %u\n", list->array[i].offset);
-        printf("LENGHT: %u\n", list->array[i].lenght);
-
 
         char* outputPath = (char*)malloc(255);
         sprintf(outputPath, "%s%s", baseOutput, list->array[i].path);
@@ -290,7 +274,6 @@ int main(int argc, char** argv)
 
         char* folder = (char*)malloc(255);
         sprintf(folder, "%s%s", baseOutput, list->array[i].folder);
-        printf(folder);
 
         char* currentPath = (char*)calloc(255, 1);
 
@@ -309,10 +292,6 @@ int main(int argc, char** argv)
             fwrite(data, sizeof(char), list->array[i].lenght, output);
         }
 
-        printf("\nSIZEOF DATA: %zu\n", sizeof(data));
-        printf("SIZEOF PRELOAD: %zu\n", sizeof(list->array[i].preload));
-        printf("PRELOAD: %hu\n", list->array[i].preload);
-        
         fclose(output);
         free(outputPath);
         free(folder);
