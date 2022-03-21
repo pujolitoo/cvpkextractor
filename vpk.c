@@ -11,7 +11,7 @@
     #define RECDIRS(x) CreateDirectory(x, NULL)
 
 #else
-        #define RECDIRS(x) mkdir(x)     
+    #define RECDIRS(x) mkdir(x)     
 #endif
 
 
@@ -136,9 +136,9 @@ int mkdirs(char* fPath, char* currentPath)
 }
 
 
-void* getFile(char* path, VPKEntry_t entry)
+char* getFile(char* path, VPKEntry_t entry)
 {
-    void* data = calloc(1, entry.lenght);
+    char* data = malloc(entry.lenght);
     char* fullPath = (char*)malloc(255);
     if (entry.index >= 0)
     {
@@ -156,8 +156,14 @@ void* getFile(char* path, VPKEntry_t entry)
     }
 
     FILE* vpkEntry = fopen(fullPath, "rb");
-    skipBytes(entry.offset, vpkEntry);
-    fread(data, (size_t)entry.lenght, 1, vpkEntry);
+    if(!vpkEntry)
+    {
+        printf("ERROR WHILE READING VPK FILE");
+        exit(1);
+    }
+    fseek(vpkEntry, entry.offset, SEEK_SET);
+    size_t readed = fread(data, 1, entry.lenght, vpkEntry);
+    printf("SIZEOF: %zu\n", readed);
     fclose(vpkEntry);
     free(fullPath);
     return data;
@@ -287,7 +293,6 @@ int main(int argc, char** argv)
         printf("OFFSET: %u\n", list->array[i].offset);
         printf("LENGHT: %u\n", list->array[i].lenght);
 
-        getchar();
 
         char* outputPath = (char*)malloc(255);
         sprintf(outputPath, "%s%s", baseOutput, list->array[i].path);
@@ -301,13 +306,23 @@ int main(int argc, char** argv)
 
         mkdirs(folder, currentPath);
 
-        //get file data
-        void* data = getFile(absoluteName, list->array[i]);
 
         //output file
         FILE* output = fopen(outputPath, "wb");
+        char* data;
+        if(list->array[i].preload != 0)
+        {
+            fwrite(list->array[i].preload, sizeof(list->array[i].preload), 1, output);
+        }else if (list->array[i].lenght != 0)
+        {
+            data = getFile(absoluteName, list->array[i]);
+            fwrite(data, sizeof(char), list->array[i].lenght, output);
+        }
+
+        printf("\nSIZEOF DATA: %zu\n", sizeof(data));
+        printf("SIZEOF PRELOAD: %zu\n", sizeof(list->array[i].preload));
+        printf("PRELOAD: %hu\n", list->array[i].preload);
         
-        fwrite(data, sizeof(data), 1, output);
         fclose(output);
         free(outputPath);
         free(folder);
