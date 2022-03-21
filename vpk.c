@@ -128,7 +128,6 @@ int mkdirs(char* fPath, char* currentPath)
         {
             break;
         }
-        
     }
     strcat(currentPath, folder);
     RECDIRS(currentPath);
