@@ -19,7 +19,7 @@ typedef struct{
     unsigned int CRC; // checksum
     char* path; //virtual path
     char* folder; // folder
-    unsigned int preload;
+    unsigned short preload;
     unsigned short index; // vpk file part index
     unsigned int offset; // offset from pos 0 of the vpk file
     unsigned int lenght; // file size
@@ -136,9 +136,9 @@ int mkdirs(char* fPath, char* currentPath)
 }
 
 
-char* getFile(char* path, VPKEntry_t entry)
+void* getFile(char* path, VPKEntry_t entry)
 {
-    char* data = calloc(1, entry.lenght);
+    void* data = calloc(1, entry.lenght);
     char* fullPath = (char*)malloc(255);
     if (entry.index >= 0)
     {
@@ -281,16 +281,20 @@ int main(int argc, char** argv)
     printf("ANAME: %s\n", absoluteName);
 
     char* baseOutput = "./vpk_extracted/";
-    char* test1 = "a";
-    int offset = 0;
-    while(offset < list->count)
+    for(int i = 0; i < list->count; i++)
     {
+        printf("\nINDEX: %u\n", list->array[i].index);
+        printf("OFFSET: %u\n", list->array[i].offset);
+        printf("LENGHT: %u\n", list->array[i].lenght);
+
+        getchar();
+
         char* outputPath = (char*)malloc(255);
-        sprintf(outputPath, "%s%s", baseOutput, list->array[offset].path);
+        sprintf(outputPath, "%s%s", baseOutput, list->array[i].path);
         printf("%s\n", outputPath);
 
         char* folder = (char*)malloc(255);
-        sprintf(folder, "%s%s", baseOutput, list->array[offset].folder);
+        sprintf(folder, "%s%s", baseOutput, list->array[i].folder);
         printf(folder);
 
         char* currentPath = (char*)calloc(255, 1);
@@ -298,7 +302,7 @@ int main(int argc, char** argv)
         mkdirs(folder, currentPath);
 
         //get file data
-        char* data = getFile(absoluteName, list->array[offset]);
+        void* data = getFile(absoluteName, list->array[i]);
 
         //output file
         FILE* output = fopen(outputPath, "wb");
@@ -309,9 +313,6 @@ int main(int argc, char** argv)
         free(folder);
         free(currentPath);
         free(data);
-
-        //increent offset
-        offset++;
     }
 
     getchar();
