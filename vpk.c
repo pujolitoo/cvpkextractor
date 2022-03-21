@@ -7,7 +7,11 @@
 
 #if defined(_WIN32)
     #include<windows.h>
-    #include<tchar.h>     
+    #include<tchar.h>
+    #define RECDIRS(x) CreateDirectory(x, NULL)
+
+#else
+        #define RECDIRS(x) mkdir(x)     
 #endif
 
 
@@ -28,6 +32,8 @@ typedef struct{
 } VPKEntryList_t;
 
 static unsigned int files = 0;
+
+static unsigned int runs = 0;
 
 size_t skipBytes(size_t offset, FILE* file)
 {
@@ -103,6 +109,52 @@ void deleteArray(VPKEntryList_t* list)
     free(list);
 }
 
+
+int mkdirs(char* fPath, char* currentPath)
+{
+    char* folder = (char*)malloc(255);
+    folder[0] = '\0';
+
+    if(runs==5) return 0;
+
+    if(fPath[strlen(currentPath)]=='\0') return 0;
+
+    for(int i = (int)strlen(currentPath); i < strlen(fPath); i++)
+    {
+        unsigned int offset = (i-strlen(currentPath));
+        if(offset!=0 && folder[offset] == '\0')
+        {
+            break;
+        }
+        printf("OFFSET: %d\n", offset);
+        folder[offset] = fPath[i];
+        printf("CHAR: %c\n", folder[i]);
+        if(folder[offset]=='/' || folder[offset] == '\\')
+        {
+            folder[offset+1] = '\0';
+            break;
+        }
+    }
+
+    printf("%s\n", folder);
+    printf("%u\n", strlen(folder));
+    strcat(currentPath, folder);
+    printf("CONCATENATED: %s\n\n", currentPath);
+    free(folder);
+    //RECDIRS(currentPath);
+    runs++;
+    return mkdirs(fPath, currentPath);
+}
+
+void testing()
+{
+    char* currentPath = (char*)malloc(255);
+    currentPath[0] = '\0';
+    mkdirs("./holas/holas/holis/holas", currentPath);
+    printf("----END TEST----\n");
+    getchar();
+}
+
 void getFile(char* path, VPKEntry_t entry, char* data)
 {
     char* fullPath = (char*)malloc(255);
@@ -130,10 +182,10 @@ void getFile(char* path, VPKEntry_t entry, char* data)
 
 char *deleteExtension(char* source, char* extension)
 {
-    char* temp = (char*)malloc(strlen(source));
-    strcpy(temp, source);
-    temp[(strlen(temp)-strlen(extension))] = '\0';
-    return temp;
+    char* currentPath = (char*)malloc(strlen(source));
+    strcpy(currentPath, source);
+    currentPath[(strlen(currentPath)-strlen(extension))] = '\0';
+    return currentPath;
 }
 
 int main(int argc, char** argv)
@@ -144,6 +196,8 @@ int main(int argc, char** argv)
         printf("Please enter a vpk path.");
         exit(0);
     }
+
+    testing();
 
     char* dirPath = argv[1];
     char* absoluteName = deleteExtension(argv[1], "dir.vpk");
@@ -259,11 +313,7 @@ int main(int argc, char** argv)
         sprintf(folder, "%s%s", baseOutput, list->array[offset].folder);
         printf(folder);
 
-        #if defined(WIN32)
-            CreateDirectory(baseOutput, NULL);
-            CreateDirectory("./vpk_extracted/sound", NULL);
-            CreateDirectory(folder, NULL);
-        #endif
+        mkdirs(folder, 0);
 
         //get file data
         getFile(absoluteName, list->array[offset], data);
