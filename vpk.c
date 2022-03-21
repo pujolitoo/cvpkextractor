@@ -35,16 +35,6 @@ static unsigned int files = 0;
 
 static unsigned int runs = 0;
 
-size_t skipBytes(size_t offset, FILE* file)
-{
-    size_t res = fread(NULL, offset, 1, file);
-    if(ferror(file))
-    {
-        printf("There was some error skipping bytes.");
-    }
-    return res;
-}
-
 
 char *readChars(FILE* file)
 {
@@ -245,10 +235,10 @@ int main(int argc, char** argv)
                 file.folder = malloc(strlen(folder)+1);
                 sprintf(file.folder, "%s", folder);
                 fread(&file.preload, 2, 1, vpkfile);
-                fread(&file.index, sizeof(unsigned int), 1, vpkfile);
+                fread(&file.index, sizeof(unsigned short), 1, vpkfile);
                 fread(&file.offset, sizeof(unsigned int), 1, vpkfile);
                 fread(&file.lenght, sizeof(unsigned int), 1, vpkfile);
-                skipBytes(2, vpkfile);
+                fseek(vpkfile, sizeof(unsigned short), SEEK_CUR);
                 printf("SIZE: %u\n", sizeof(unsigned int)*3 + sizeof(unsigned short)*3);
                 addToArray(list, file);
                 printf("PATH: %s\n", file.path);
