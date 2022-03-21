@@ -112,37 +112,27 @@ void deleteArray(VPKEntryList_t* list)
 
 int mkdirs(char* fPath, char* currentPath)
 {
-    char* folder = (char*)malloc(255);
-    folder[0] = '\0';
-
-    if(runs==5) return 0;
+    char* folder = (char*)calloc(255, 1);
 
     if(fPath[strlen(currentPath)]=='\0') return 0;
 
     for(int i = (int)strlen(currentPath); i < strlen(fPath); i++)
     {
         unsigned int offset = (i-strlen(currentPath));
-        if(offset!=0 && folder[offset] == '\0')
-        {
-            break;
-        }
-        printf("OFFSET: %d\n", offset);
         folder[offset] = fPath[i];
-        printf("CHAR: %c\n", folder[i]);
         if(folder[offset]=='/' || folder[offset] == '\\')
         {
             folder[offset+1] = '\0';
             break;
+        }else if (folder[offset] == '\0')
+        {
+            break;
         }
+        
     }
-
-    printf("%s\n", folder);
-    printf("%u\n", strlen(folder));
     strcat(currentPath, folder);
-    printf("CONCATENATED: %s\n\n", currentPath);
+    RECDIRS(currentPath);
     free(folder);
-    //RECDIRS(currentPath);
-    runs++;
     return mkdirs(fPath, currentPath);
 }
 
