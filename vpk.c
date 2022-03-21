@@ -135,17 +135,10 @@ int mkdirs(char* fPath, char* currentPath)
     return mkdirs(fPath, currentPath);
 }
 
-void testing()
-{
-    char* currentPath = (char*)malloc(255);
-    currentPath[0] = '\0';
-    mkdirs("./holas/holas/holis/holas", currentPath);
-    printf("----END TEST----\n");
-    getchar();
-}
 
-void getFile(char* path, VPKEntry_t entry, char* data)
+char* getFile(char* path, VPKEntry_t entry)
 {
+    char* data = calloc(1, entry.lenght);
     char* fullPath = (char*)malloc(255);
     if (entry.index >= 0)
     {
@@ -167,6 +160,7 @@ void getFile(char* path, VPKEntry_t entry, char* data)
     fread(data, (size_t)entry.lenght, 1, vpkEntry);
     fclose(vpkEntry);
     free(fullPath);
+    return data;
 }
 
 char *deleteExtension(char* source, char* extension)
@@ -185,8 +179,6 @@ int main(int argc, char** argv)
         printf("Please enter a vpk path.");
         exit(0);
     }
-
-    testing();
 
     char* dirPath = argv[1];
     char* absoluteName = deleteExtension(argv[1], "dir.vpk");
@@ -293,7 +285,6 @@ int main(int argc, char** argv)
     int offset = 0;
     while(offset < list->count)
     {
-        char* data;
         char* outputPath = (char*)malloc(255);
         sprintf(outputPath, "%s%s", baseOutput, list->array[offset].path);
         printf("%s\n", outputPath);
@@ -302,10 +293,12 @@ int main(int argc, char** argv)
         sprintf(folder, "%s%s", baseOutput, list->array[offset].folder);
         printf(folder);
 
-        mkdirs(folder, 0);
+        char* currentPath = (char*)calloc(255, 1);
+
+        mkdirs(folder, currentPath);
 
         //get file data
-        getFile(absoluteName, list->array[offset], data);
+        char* data = getFile(absoluteName, list->array[offset]);
 
         //output file
         FILE* output = fopen(outputPath, "wb");
@@ -314,6 +307,8 @@ int main(int argc, char** argv)
         fclose(output);
         free(outputPath);
         free(folder);
+        free(currentPath);
+        free(data);
 
         //increent offset
         offset++;
