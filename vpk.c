@@ -351,6 +351,7 @@ int main(int argc, char** argv)
     }
 
     deleteArray(list);
+    deleteVpk(mainVpk);
 
     CGREEN printf("\n""DONE EXTRACTING!""\n"); CRESET
 
