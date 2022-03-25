@@ -78,11 +78,26 @@ int fillVpk(VPK vpk, VPK_t entry)
 
 void deleteVpk(VPK vpk)
 {
-    free(vpk->absPathNoExt);
-    free(vpk->header);
-    free(vpk->content->array);
-    free(vpk->content);
-    free(vpk);
+    if(vpk->absPathNoExt!=NULL)
+    {
+        free(vpk->absPathNoExt);
+    }
+    if(vpk->header!=NULL)
+    {
+        free(vpk->header);
+    }
+    if(vpk->content->array != NULL)
+    {
+        free(vpk->content->array);
+    }
+    if(vpk->content != NULL)
+    {
+        free(vpk->content);
+    }
+    if(vpk!=NULL)
+    {
+        free(vpk);
+    }
 }
 
 char *readChars(FILE* file)
