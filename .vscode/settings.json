@@ -2,6 +2,7 @@
     "files.associations": {
         "*.cpp": "cpp",
         "*.json": "json",
-        "atomic": "c"
+        "atomic": "c",
+        "type_traits": "c"
     }
 }

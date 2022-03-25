@@ -2,8 +2,10 @@
 #include<stdio.h>
 #include<string.h>
 #include<errno.h>
-#include<sys/stat.h>
-#include<sys/types.h>
+
+#define USHSIZE sizeof(unsigned short)
+#define UINTSIZE sizeof(unsigned int)
+
 
 #if defined(_WIN32)
     #include<windows.h>
@@ -25,16 +27,63 @@ typedef struct{
     unsigned int lenght; // file size
 } VPKEntry_t;
 
+typedef VPKEntry_t *VPKEntry;
+
+typedef struct{
+    unsigned int signature;
+	unsigned int version;
+	unsigned int tree_length;
+
+	unsigned int unknown1;
+	unsigned int footerlength;
+	unsigned int unknown3;
+	unsigned int unknown4;
+}VPKHeader2_t;
+
+typedef VPKHeader2_t *VPKHeader2;
+
 typedef struct{
     VPKEntry_t* array;
     unsigned int count;
     size_t size;
 } VPKEntryList_t;
 
-static unsigned int files = 0;
+typedef VPKEntryList_t *VPKEntryList;
+
+typedef struct{
+    char absPathNoExt[255];
+    VPKHeader2 header;
+    VPKEntryList content;
+}VPK_t;
+
+typedef VPK_t *VPK;
 
 static unsigned int runs = 0;
 
+VPK createVpk()
+{
+    VPK ret = (VPK)malloc(sizeof(VPK_t));
+    ret->content = NULL;
+    ret->header = NULL;
+    return ret;
+}
+
+int fillVpk(VPK vpk, VPK_t entry)
+{
+    strcpy(vpk->absPathNoExt, entry.absPathNoExt);
+    vpk->content = entry.content;
+    vpk->header = entry.header;
+    return 0;
+}
+
+void deleteVpk(VPK vpk)
+{
+    free(vpk->absPathNoExt);
+    free(vpk->header);
+    free(vpk->content->array);
+    free(vpk->content);
+    free(vpk);
+}
 
 char *readChars(FILE* file)
 {
@@ -52,8 +101,6 @@ char *readChars(FILE* file)
         }
         offset++;
     }
-
-    printf("LEN: %u\n", strlen(final));
 
     if(strlen(final)==0)
     {
@@ -83,7 +130,6 @@ void addToArray(VPKEntryList_t* array, VPKEntry_t data)
     }
     array->size += newsize;
     array->array = (VPKEntry_t*)realloc(array->array, array->size);
-    printf("%u\n", newsize);
     if(array->array == NULL)
     {
         printf("ERROR ADDING TO ARRAY. %s\n", strerror(errno));
@@ -126,9 +172,9 @@ int mkdirs(char* fPath, char* currentPath)
 }
 
 
-char* getFile(char* path, VPKEntry_t entry)
+void* getFile(char* path, VPKEntry_t entry)
 {
-    char* data = malloc(entry.lenght);
+    void* data = malloc(entry.lenght);
     char* fullPath = (char*)malloc(255);
     if (entry.index >= 0)
     {
@@ -175,6 +221,22 @@ int main(int argc, char** argv)
         exit(0);
     }
 
+#if defined(_WIN32)
+        HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+        CONSOLE_SCREEN_BUFFER_INFO consoleInfo;
+        WORD saved_attributes;
+
+        GetConsoleScreenBufferInfo(hConsole, &consoleInfo);
+        saved_attributes = consoleInfo.wAttributes;
+
+        #define CBLUE {SetConsoleTextAttribute(hConsole, FOREGROUND_BLUE);}
+        #define CGREEN {SetConsoleTextAttribute(hConsole, FOREGROUND_GREEN);}
+        #define CRED {SetConsoleTextAttribute(hConsole, FOREGROUND_RED);}
+        #define CRESET {SetConsoleTextAttribute(hConsole, saved_attributes);}
+#endif
+
+    VPK mainVpk = createVpk();
+
     char* dirPath = argv[1];
     char* absoluteName = deleteExtension(argv[1], "dir.vpk");
 
@@ -189,10 +251,10 @@ int main(int argc, char** argv)
     unsigned int treeSize;
 
 
-    fread(&signature, sizeof(unsigned int), 1, vpkfile); // SIGNATURE
-    fread(&version, sizeof(unsigned int), 1, vpkfile);  // VPK VERSION
-    fread(&treeSize, sizeof(unsigned int), 1, vpkfile); // TreeSize
-    fseek(vpkfile, sizeof(unsigned int)*7, SEEK_SET); // SKIPPING UNECESSARY STUFF FROM FILE
+    fread(&signature, UINTSIZE, 1, vpkfile); // SIGNATURE
+    fread(&version, UINTSIZE, 1, vpkfile);  // VPK VERSION
+    fread(&treeSize, UINTSIZE, 1, vpkfile); // TreeSize
+    fseek(vpkfile, UINTSIZE*7, SEEK_SET); // SKIPPING UNECESSARY STUFF FROM FILE
 
     char* extension;
     char* folder;
@@ -200,11 +262,11 @@ int main(int argc, char** argv)
 
     VPKEntryList_t* list = createArray();
 
+    printf("Reading file...\n");
 
     while(1) // extension
     {
         extension = readChars(vpkfile);
-        printf("------EXTENSION READ START .%s-----------\n", extension);
         if(extension == NULL)
         {
             break;
@@ -212,7 +274,6 @@ int main(int argc, char** argv)
         while(1) // folders
         {
             folder = readChars(vpkfile);
-            printf("------FOLDER READ START----------- %s\n", folder);
             if(folder == NULL)
             {
                 break;
@@ -220,7 +281,6 @@ int main(int argc, char** argv)
             while(1) // Filename
             {
 
-                printf("------FILE READ START-----------\n");
                 filename = readChars(vpkfile);
                 if(filename == NULL)
                 {
@@ -228,41 +288,32 @@ int main(int argc, char** argv)
                 }
 
                 VPKEntry_t file;
-                fread(&file.CRC, sizeof(unsigned int), 1, vpkfile);
+                fread(&file.CRC, UINTSIZE, 1, vpkfile);
                 file.path = malloc(strlen(folder) + strlen(filename) + strlen(extension) +1);
                 sprintf(file.path, "%s/%s.%s", folder, filename, extension);
                 file.folder = malloc(strlen(folder)+1);
                 sprintf(file.folder, "%s", folder);
-                fread(&file.preload, 2, 1, vpkfile);
-                fread(&file.index, sizeof(unsigned short), 1, vpkfile);
-                fread(&file.offset, sizeof(unsigned int), 1, vpkfile);
-                fread(&file.lenght, sizeof(unsigned int), 1, vpkfile);
-                fseek(vpkfile, sizeof(unsigned short), SEEK_CUR);
-                printf("SIZE: %u\n", sizeof(unsigned int)*3 + sizeof(unsigned short)*3);
+                fread(&file.preload, USHSIZE, 1, vpkfile);
+                fread(&file.index, USHSIZE, 1, vpkfile);
+                fread(&file.offset, UINTSIZE, 1, vpkfile);
+                fread(&file.lenght, UINTSIZE, 1, vpkfile);
+                fseek(vpkfile, USHSIZE, SEEK_CUR);
                 addToArray(list, file);
-                printf("PATH: %s\n", file.path);
 
-                files++;
-
-                printf("------FILE READ END-----------\n");
                 filename = NULL;
 
             }
-            printf("------FOLDER READ END-----------\n");
             folder = NULL;
         }
-        printf("------EXTENSION READ END-----------\n\n");
         extension = NULL;
     }
 
     fclose(vpkfile);
 
-    printf("FILES READED: %u\n\n", list->count);
+    printf("FILES READED: %u files.\n\n", list->count);
 
     printf("EXTRACTING...\n");
 
-
-    printf("ANAME: %s\n", absoluteName);
 
     char* baseOutput = "./vpk_extracted/";
     for(int i = 0; i < list->count; i++)
@@ -282,7 +333,7 @@ int main(int argc, char** argv)
 
         //output file
         FILE* output = fopen(outputPath, "wb");
-        char* data;
+        void* data;
         if(list->array[i].preload != 0)
         {
             fwrite(list->array[i].preload, sizeof(list->array[i].preload), 1, output);
@@ -299,7 +350,13 @@ int main(int argc, char** argv)
         free(data);
     }
 
-    getchar();
+    deleteArray(list);
+
+    CGREEN printf("\n""DONE EXTRACTING!""\n"); CRESET
+
+#if defined(_WIN32)
+    system("PAUSE");
+#endif
 
     return 0;
 }
